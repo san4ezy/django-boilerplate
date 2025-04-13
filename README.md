@@ -52,23 +52,23 @@ Here collected most popular commands with potential needed options for run them 
 
 Feel free to extend this list with your commands.
 
-- setup -- Setup new environments. Be careful, it will replace existing env files and compose files. Use it if you want setup new environment, changing the `ENV` variable first.
-- keygen -- Generate random secret keys and write them to `environments/<ENV>/app.env` file
-- build -- Initiate the compose build process
-- rebuild -- Down existing project, build it and up again
-- up -- Just up project
-- down -- Just down project
-- ps -- List running containers
-- logs -- Tail logs of the Django app
-- start -- Start project
-- stop -- Stop Project
-- restart -- Restart project
-- bash -- Run Django container's bash
-- shell -- Run Django shell
-- migrations -- Run Django migrations commands
-- collectstatic -- Run Django collect static command
-- createsuperuser -- Start the superuser creation flow
-- startapp -- Create new Django application
+- **fab setup** -- Setup new environments. Be careful, it will replace existing env files and compose files. Use it if you want setup new environment, changing the `ENV` variable first.
+- **fab keygen** -- Generate random secret keys and write them to `environments/<ENV>/app.env` file
+- **fab build** -- Initiate the compose build process
+- **fab rebuild** -- Down existing project, build it and up again
+- **fab up** -- Just up project
+- **fab down** -- Just down project
+- **fab ps** -- List running containers
+- **fab logs** -- Tail logs of the Django app
+- **fab start** -- Start project
+- **fab stop** -- Stop Project
+- **fab restart** -- Restart project
+- **fab bash** -- Run Django container's bash
+- **fab shell** -- Run Django shell
+- **fab migrations** -- Run Django migrations commands
+- **fab collectstatic** -- Run Django collect static command
+- **fab createsuperuser** -- Start the superuser creation flow
+- **fab startapp** -- Create new Django application
 
 ## New application
 
