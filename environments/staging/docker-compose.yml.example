@@ -1,0 +1,32 @@
+services:
+
+  <APP_NAME>:
+    build:
+      context: ../../
+      dockerfile: Dockerfile
+      args:
+        ENV: ${ENV}
+    container_name: "<PROJECT_NAME>_<APP_NAME>"
+    image: "<PROJECT_NAME>_<APP_NAME>"
+    restart: unless-stopped
+    env_file:
+      - app.env
+    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --worker 3
+    volumes:
+      - ../../:/app
+    ports:
+      - "<APP_PORT>:8000"
+    depends_on:
+      - db
+
+  db:
+    image: "postgres:14.5-alpine"
+    container_name: "<PROJECT_NAME>_db"
+    restart: unless-stopped
+    env_file:
+      - app.env
+    volumes:
+      - postgres:/var/lib/postgresql/data
+
+volumes:
+  postgres:

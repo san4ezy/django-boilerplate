@@ -1,0 +1,52 @@
+[project]
+name = "boilerplate"
+version = "0.1.0"
+description = "Add your description here"
+requires-python = ">=3.12"
+dependencies = [
+    "dj-database-url>=2.3.0",
+    "django-filter>=25.1",
+    "django>=5.2",
+    "djangorestframework>=3.16.0",
+    "psycopg2-binary>=2.9.10",
+    "django-extensions>=4.1",
+    "djangorestframework-simplejwt>=5.5.0",
+    "factory-boy>=3.3.3",
+    "pytest-factoryboy>=2.7.0",
+    "drf-nested-routers>=0.94.1",
+    "faker>=37.1.0",
+    "flake8>=7.2.0",
+    "pytest>=8.3.5",
+    "pytest-django>=4.11.1",
+    "pytest-cov>=6.1.1",
+    "ipython>=9.1.0",
+    "isort>=6.0.1",
+    "pytest-mock>=3.14.0",
+    "django-cors-headers>=4.7.0",
+    "django-jazzmin>=3.0.1",
+    "django-factory-boy>=1.0.0",
+    "django-pytest>=0.2.0",
+    "orjson>=3.10.16",
+    "pylint-django>=2.6.1",
+    "black>=25.1.0",
+    "django-json-widget>=2.0.1",
+    "python-dotenv>=1.1.0",
+    "pillow>=11.2.1",
+    "drf-gears>=0.10.7",
+    "django-soft-delete>=1.0.18",
+    "drf-yasg>=1.21.10",
+    "django-redis>=5.4.0",
+    "fabric>=3.2.2",
+]
+
+[dependency-groups]
+production = [
+    "gunicorn>=23.0.0",
+]
+staging = [
+    "gunicorn>=23.0.0",
+]
+development = [
+    "flake8>=7.2.0",
+]
+
