@@ -32,14 +32,14 @@ Of course, you can modify this data manually. But notice, if you already have im
 
 Now the boilerplate is available for up:
 ```bash
-fab build
-fab up
-fab migrations migrate
+fab docker build
+fab docker up
+fab dj migrate
 ```
 
 Optionally, create an admin:
 ```bash
-fab createsuperuser
+fab dj createsuperuser
 ```
 
 Now you have Django running with Docker on defined port.
@@ -54,21 +54,29 @@ Feel free to extend this list with your commands.
 
 - **fab setup** -- Setup new environments. Be careful, it will replace existing env files and compose files. Use it if you want setup new environment, changing the `ENV` variable first.
 - **fab keygen** -- Generate random secret keys and write them to `environments/<ENV>/app.env` file
-- **fab build** -- Initiate the compose build process
-- **fab rebuild** -- Down existing project, build it and up again
-- **fab up** -- Just up project
-- **fab down** -- Just down project
-- **fab ps** -- List running containers
-- **fab logs** -- Tail logs of the Django app
-- **fab start** -- Start project
-- **fab stop** -- Stop Project
-- **fab restart** -- Restart project
-- **fab bash** -- Run Django container's bash
-- **fab shell** -- Run Django shell
-- **fab migrations** -- Run Django migrations commands
-- **fab collectstatic** -- Run Django collect static command
-- **fab createsuperuser** -- Start the superuser creation flow
-- **fab startapp** -- Create new Django application
+- **fab docker build** -- Initiate the compose build process
+- **fab docker rebuild** -- Down existing project, build it and up again
+- **fab docker up** -- Just up project
+- **fab docker down** -- Just down project
+- **fab docker ps** -- List running containers
+- **fab docker logs** -- Tail logs of the Django app
+- **fab docker start** -- Start project
+- **fab docker stop** -- Stop Project
+- **fab docker restart** -- Restart project
+- **fab docker bash** -- Run Django container's bash
+- **fab dj shell** -- Run Django shell
+- **fab dj makemigrations/migrate/showmigrations** -- Run Django migrations commands
+- **fab dj collectstatic** -- Run Django collect static command
+- **fab dj createsuperuser** -- Start the superuser creation flow
+- **fab dj startapp** -- Create new Django application
+
+Some commands have default args values. But you can impact how it works. For example:
+```bash
+fab docker logs
+# docker compose -f environments/development/docker-compose.yml logs app --tail 100 -f
+fab docker logs --args '--tail 1000'
+# docker compose -f environments/development/docker-compose.yml logs app --tail 1000
+```
 
 ## New application
 

@@ -3,6 +3,7 @@ import shutil
 import string
 import secrets
 import base64
+
 from fabric import task
 from pathlib import Path
 
@@ -99,26 +100,23 @@ class S:
         return cls.p(s, color="yellow", style="highlighted")
 
 
-
 Core.load_dotenv(".env")
-
 
 ENV = os.getenv("ENV", "development")
 PROJECT_NAME = os.getenv("PROJECT_NAME")
 APP_NAME = os.getenv("APP_NAME")
 APP_PORT = os.getenv("APP_PORT")
-
 COMPOSE = Path("environments") / ENV / "docker-compose.yml"
 ENV_FILE = Path("environments") / ENV / "app.env"
+
+TEST_MODE: bool = False
 
 
 class InstallTasks:
     def setup(self, c):
-        # If you cannot install fabric and dotenv globally it will not work
         env_dir = Path("environments") / ENV
 
         print(S.info("Env directory"), S.normal(env_dir))
-        # os.makedirs(env_dir, exist_ok=True)
         filenames = (
             ("app.env.example", "app.env",),
             ("docker-compose.yml.example", "docker-compose.yml",),
@@ -167,26 +165,100 @@ class InstallTasks:
         print(S.warning("!KEEP THEM SAFE!"))
 
 
-class DockerTasks:
-    _command = f"docker-compose -f {COMPOSE}"
+class ProxyMixin(object):
+    def get_command(self, cmd: str, args: str):
+        return {
+            "default": ["method", ("arg1", "arg2"), ],
+        }
 
-    def command(self, c, cmd):
-        cmd = f"{self._command} {cmd}"
-        print(S.secondary(cmd))
-        c.run(cmd, pty=True)
+    def _get_command(self, cmd: str, args: str):
+        return self.get_command(cmd, args).get(cmd)
+
+    def cmd(self, tpl: str, cmd: str, args: str):
+        return [self.format(tpl, cmd, args), ]
+
+    def format(self, tpl: str, cmd: str, args: str):
+        return tpl.format(**{
+            "ENV": ENV,
+            "PROJECT_NAME": PROJECT_NAME,
+            "APP_NAME": APP_NAME,
+            "APP_PORT": APP_PORT,
+            "COMPOSE": COMPOSE,
+            "ENV_FILE": ENV_FILE,
+            "cmd": cmd,
+            "args": args,
+        })
+
+    def command(self, c, cmd, args: str):
+        _cmd = self._get_command(cmd, args)
+        if cmd is None:
+            print(S.danger(f"ERROR: command not found: '{cmd}'"))
+            return
+        method, method_args = _cmd
+        cmds = method(*method_args)
+        for n, _c in enumerate(cmds):
+            print(S.info(f"[{n+1}/{len(cmds)}]"), S.secondary(_c))
+            if not TEST_MODE:
+                c.run(_c)
 
 
-class DjangoTasks:
-    _command = f"docker-compose -f {COMPOSE} exec {APP_NAME} python manage.py"
+class DockerTasks(ProxyMixin):
+    def get_command(self, cmd: str, args: str):
+        tpl = "docker compose -f {COMPOSE} {cmd} {args}"
+        default_args = (tpl, cmd, args)
+        return {
+            "ps": (self.cmd, default_args),
+            "build": (self.cmd, default_args),
+            "up": (self.cmd, (tpl, cmd, "-d")),
+            "down": (self.cmd, default_args),
+            "start": (self.cmd, default_args),
+            "stop": (self.cmd, default_args),
+            "restart": (self.cmd, default_args),
+            "logs": (self.cmd, (
+                "docker compose -f {COMPOSE} logs {APP_NAME} {args}",
+                cmd,
+                args or "--tail 100 -f"
+            )),
+            "bash": (
+                self.cmd, (
+                    "docker compose -f {COMPOSE} exec {APP_NAME} bash {args}", cmd, args
+                )),
+            "rebuild": (self.rebuild, default_args),
+        }
 
-    def command(self, c, cmd, extra_args=""):
-        cmd = f"{self._command} {cmd} {extra_args}"
-        print(S.secondary(cmd))
-        c.run(cmd, pty=True)
+    def rebuild(self, tpl: str, cmd: str, args: str):
+        return [
+            self.format(tpl, "down", args),
+            self.format(tpl, "build --no-cache", args),
+            self.format(tpl, "up -d", args),
+        ]
 
-    def startapp(self, c, app_name: str):
-        c.run(f"mkdir apps/{app_name}", pty=True)
-        self.command(c, f"startapp {app_name} apps/{app_name}")
+
+class DjangoTasks(ProxyMixin):
+    def get_command(self, cmd: str, args: str):
+        tpl = "docker compose -f {COMPOSE} exec {APP_NAME} python manage.py {cmd} {args}"
+        default_args = (tpl, cmd, args)
+        return {
+            "shell": (self.cmd, (tpl, "shell_plus", args)),
+            "makemigrations": (self.cmd, default_args),
+            "migrate": (self.cmd, default_args),
+            "showmigrations": (self.cmd, default_args),
+            "collectstatic": (self.cmd, default_args),
+            "createsuperuser": (self.cmd, default_args),
+            "startapp": (self.startapp, default_args),
+        }
+
+    def startapp(self, tpl: str, cmd: str, args: str):
+        # args - must start with app_name
+        app_name, *args = args.strip().split(" ")
+        if not app_name:
+            print(S.danger(f"ERROR: `app_name` wan not provided"))
+            return []
+        return [
+            f"mkdir -p apps/{app_name}",
+            self.format(tpl, f"startapp {app_name}", f"apps/{app_name}"),
+        ]
+
 
 # TASKS DEFINITION
 INSTALL = InstallTasks()
@@ -202,68 +274,14 @@ def keygen(c):
     INSTALL.keygen(c)
 
 @task
-def build(c):
-    DOCKER.command(c, "build")
+def docker(c, cmd, args=""):
+    DOCKER.command(c, cmd, args)
 
 @task
-def rebuild(c, nocache=False):
-    DOCKER.command(c, "down")
-    DOCKER.command(c, f"build {'--nocache' if nocache else ''}")
-    DOCKER.command(c, "up -d")
+def django(c, cmd, args=""):
+    DJANGO.command(c, cmd, args)
 
 @task
-def up(c):
-    DOCKER.command(c, "up -d")
-
-@task
-def down(c):
-    DOCKER.command(c, "down")
-
-@task
-def ps(c):
-    DOCKER.command(c, "ps")
-
-@task
-def logs(c):
-    DOCKER.command(c, f"logs {APP_NAME} --tail 100 -f")
-
-@task
-def start(c):
-    DOCKER.command(c, "start")
-
-@task
-def stop(c):
-    DOCKER.command(c, "stop")
-
-@task
-def restart(c):
-    DOCKER.command(c, "restart")
-
-@task
-def bash(c):
-    DOCKER.command(c, f"exec {APP_NAME} bash")
-
-@task
-def shell(c):
-    DJANGO.command(c, "shell_plus")
-
-@task
-def migrations(c, cmd, extra_args=""):
-    cmd = dict(
-        show="showmigrations",
-        make="makemigrations",
-        migrate="migrate",
-    )[cmd]
-    DJANGO.command(c, cmd, extra_args)
-
-@task
-def collectstatic(c):
-    DJANGO.command(c, "collectstatic -y")
-
-@task
-def createsuperuser(c):
-    DJANGO.command(c, "createsuperuser")
-
-@task
-def startapp(c, app_name: str):
-    DJANGO.startapp(c, app_name)
+def dj(c, cmd, args=""):
+    # alias for `django`
+    DJANGO.command(c, cmd, args)
