@@ -1,11 +1,11 @@
+import base64
 import os
+import secrets
 import shutil
 import string
-import secrets
-import base64
+from pathlib import Path
 
 from fabric import task
-from pathlib import Path
 
 
 class Core:
@@ -24,10 +24,10 @@ class Core:
 
     @staticmethod
     def generate_secret(
-            l: int = 32,
-            is_letters: bool = True,
-            is_digits: bool = True,
-            is_special_chars: bool = True,
+        l: int = 32,
+        is_letters: bool = True,
+        is_digits: bool = True,
+        is_special_chars: bool = True,
     ):
         chars = ""
         if is_digits:
@@ -36,9 +36,7 @@ class Core:
             chars += string.ascii_letters
         if is_special_chars:
             chars += "!@#$%^&*()"
-        return "".join(
-            secrets.choice(chars) for _ in range(l)
-        )
+        return "".join(secrets.choice(chars) for _ in range(l))
 
     @staticmethod
     def generate_fernet():
@@ -118,8 +116,14 @@ class InstallTasks:
 
         print(S.info("Env directory"), S.normal(env_dir))
         filenames = (
-            ("app.env.example", "app.env",),
-            ("docker-compose.yml.example", "docker-compose.yml",),
+            (
+                "app.env.example",
+                "app.env",
+            ),
+            (
+                "docker-compose.yml.example",
+                "docker-compose.yml",
+            ),
         )
         for src, dst in filenames:
             print(f"Copying {env_dir / dst} ...", end="")
@@ -136,13 +140,17 @@ class InstallTasks:
             content = f.read()
 
         for key, value in replaces.items():
-            content = content.replace(f'<{key}>', value)
+            content = content.replace(f"<{key}>", value)
 
         with open(COMPOSE, "w") as f:
             f.write(content)
 
         print(S.success("Env copied."))
-        print(S.warning("!IMPORTANT! Replace the standard keys with your own and keep it safe!!!"))
+        print(
+            S.warning(
+                "!IMPORTANT! Replace the standard keys with your own and keep it safe!"
+            )
+        )
 
     def keygen(self, c):
         replaces = {
@@ -156,38 +164,47 @@ class InstallTasks:
             content = f.read()
 
         for key, value in replaces.items():
-            content = content.replace(f'<{key}>', value)
+            content = content.replace(f"<{key}>", value)
 
         with open(ENV_FILE, "w") as f:
             f.write(content)
 
-        print(S.info(f"Secrets writen to environment file: {ENV_FILE}"), S.success("[OK]"))
+        print(
+            S.info(f"Secrets writen to environment file: {ENV_FILE}"), S.success("[OK]")
+        )
         print(S.warning("!KEEP THEM SAFE!"))
 
 
 class ProxyMixin(object):
     def get_command(self, cmd: str, args: str):
         return {
-            "default": ["method", ("arg1", "arg2"), ],
+            "default": [
+                "method",
+                ("tpl", "cmd", "args"),
+            ],
         }
 
     def _get_command(self, cmd: str, args: str):
         return self.get_command(cmd, args).get(cmd)
 
     def cmd(self, tpl: str, cmd: str, args: str):
-        return [self.format(tpl, cmd, args), ]
+        return [
+            self.format(tpl, cmd, args),
+        ]
 
     def format(self, tpl: str, cmd: str, args: str):
-        return tpl.format(**{
-            "ENV": ENV,
-            "PROJECT_NAME": PROJECT_NAME,
-            "APP_NAME": APP_NAME,
-            "APP_PORT": APP_PORT,
-            "COMPOSE": COMPOSE,
-            "ENV_FILE": ENV_FILE,
-            "cmd": cmd,
-            "args": args,
-        })
+        return tpl.format(
+            **{
+                "ENV": ENV,
+                "PROJECT_NAME": PROJECT_NAME,
+                "APP_NAME": APP_NAME,
+                "APP_PORT": APP_PORT,
+                "COMPOSE": COMPOSE,
+                "ENV_FILE": ENV_FILE,
+                "cmd": cmd,
+                "args": args,
+            }
+        )
 
     def command(self, c, cmd, args: str):
         _cmd = self._get_command(cmd, args)
@@ -196,8 +213,10 @@ class ProxyMixin(object):
             return
         method, method_args = _cmd
         cmds = method(*method_args)
+        number = len(cmds)
         for n, _c in enumerate(cmds):
-            print(S.info(f"[{n+1}/{len(cmds)}]"), S.secondary(_c))
+            counter = f"[{n + 1}/{number}]" if number > 1 else ""
+            print(S.info(counter), S.secondary(_c))
             if not TEST_MODE:
                 c.run(_c)
 
@@ -214,15 +233,18 @@ class DockerTasks(ProxyMixin):
             "start": (self.cmd, default_args),
             "stop": (self.cmd, default_args),
             "restart": (self.cmd, default_args),
-            "logs": (self.cmd, (
-                "docker compose -f {COMPOSE} logs {APP_NAME} {args}",
-                cmd,
-                args or "--tail 100 -f"
-            )),
+            "logs": (
+                self.cmd,
+                (
+                    "docker compose -f {COMPOSE} logs {APP_NAME} {args}",
+                    cmd,
+                    args or "--tail 100 -f",
+                ),
+            ),
             "bash": (
-                self.cmd, (
-                    "docker compose -f {COMPOSE} exec {APP_NAME} bash {args}", cmd, args
-                )),
+                self.cmd,
+                ("docker compose -f {COMPOSE} exec {APP_NAME} bash {args}", cmd, args),
+            ),
             "rebuild": (self.rebuild, default_args),
         }
 
@@ -236,7 +258,10 @@ class DockerTasks(ProxyMixin):
 
 class DjangoTasks(ProxyMixin):
     def get_command(self, cmd: str, args: str):
-        tpl = "docker compose -f {COMPOSE} exec {APP_NAME} python manage.py {cmd} {args}"
+        tpl = (
+            "docker compose -f {COMPOSE} exec {APP_NAME} python manage.py {cmd} {args}"
+        )
+        tools_tpl = "docker compose -f {COMPOSE} exec {APP_NAME} {cmd} {args}"
         default_args = (tpl, cmd, args)
         return {
             "shell": (self.cmd, (tpl, "shell_plus", args)),
@@ -246,13 +271,14 @@ class DjangoTasks(ProxyMixin):
             "collectstatic": (self.cmd, default_args),
             "createsuperuser": (self.cmd, default_args),
             "startapp": (self.startapp, default_args),
+            "test": (self.cmd, (tools_tpl, "pytest", args)),
         }
 
     def startapp(self, tpl: str, cmd: str, args: str):
         # args - must start with app_name
         app_name, *args = args.strip().split(" ")
         if not app_name:
-            print(S.danger(f"ERROR: `app_name` wan not provided"))
+            print(S.danger("ERROR: `app_name` wan not provided"))
             return []
         return [
             f"mkdir -p apps/{app_name}",
@@ -260,28 +286,60 @@ class DjangoTasks(ProxyMixin):
         ]
 
 
+class LinterTasks(ProxyMixin):
+    def get_command(self, cmd: str, args: str):
+        tpl = "docker compose -f {COMPOSE} exec {APP_NAME} {cmd} {args}"
+        default_args = (tpl, cmd, args)
+        return {
+            "black": (self.cmd, (tpl, cmd, args or ".")),
+            "isort": (self.cmd, (tpl, cmd, args or "--sp setup.cfg .")),
+            "flake8": (self.cmd, (tpl, cmd, args or ".")),
+            "mypy": (self.cmd, (tpl, cmd, args or "-p apps")),
+            "all": (self.all, default_args),
+        }
+
+    def all(self, tpl: str, cmd: str, args: str):
+        return [
+            "fab lint black",
+            "fab lint isort",
+            "fab lint flake8",
+            # "fab lint mypy",
+        ]
+
+
 # TASKS DEFINITION
 INSTALL = InstallTasks()
 DOCKER = DockerTasks()
 DJANGO = DjangoTasks()
+LINTER = LinterTasks()
+
 
 @task
 def setup(c):
     INSTALL.setup(c)
 
+
 @task
 def keygen(c):
     INSTALL.keygen(c)
+
 
 @task
 def docker(c, cmd, args=""):
     DOCKER.command(c, cmd, args)
 
+
 @task
 def django(c, cmd, args=""):
     DJANGO.command(c, cmd, args)
+
 
 @task
 def dj(c, cmd, args=""):
     # alias for `django`
     DJANGO.command(c, cmd, args)
+
+
+@task
+def lint(c, cmd, args=""):
+    LINTER.command(c, cmd, args)
