@@ -2,13 +2,11 @@ celerybeat-schedule.db
 .idea/
 *__pycache__*
 db.sqlite3
-celerybeat-schedule
 *.log
-rest-api.http
-http
+http/
 .env.local
 static/
 media/
-logs
-data
+logs/
+data/
 /backups/
