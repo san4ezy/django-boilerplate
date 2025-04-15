@@ -218,7 +218,7 @@ class ProxyMixin(object):
             counter = f"[{n + 1}/{number}]" if number > 1 else ""
             print(S.info(counter), S.secondary(_c))
             if not TEST_MODE:
-                c.run(_c)
+                c.run(_c, pty=True)
 
 
 class DockerTasks(ProxyMixin):
