@@ -227,8 +227,8 @@ JAZZMIN_SETTINGS = {
     "usermenu_links": [
         {"name": "Redoc UI", "url": "/redoc/", "new_window": True},
         {"name": "Swagger UI", "url": "/doc/", "new_window": True},
-        {"name": "Swagger YAML", "url": "/doc.yaml", "new_window": True},
-        {"name": "Swagger JSON", "url": "/doc.json", "new_window": True},
+        {"name": "Swagger YAML", "url": "/doc/api.yaml", "new_window": True},
+        {"name": "Swagger JSON", "url": "/doc/api.json", "new_window": True},
     ],
     "icons": {
         "users.user": "fas fa-user",
