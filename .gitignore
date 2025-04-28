@@ -1,12 +1,7 @@
+*.pyc
 celerybeat-schedule.db
 .idea/
 *__pycache__*
 db.sqlite3
 *.log
-http/
 .env.local
-static/
-media/
-logs/
-data/
-/backups/
