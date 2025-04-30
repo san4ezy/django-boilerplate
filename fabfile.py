@@ -283,6 +283,13 @@ class DjangoTasks(ProxyMixin):
         return [
             f"mkdir -p apps/{app_name}",
             self.format(tpl, f"startapp {app_name}", f"apps/{app_name}"),
+            f"touch apps/{app_name}/signals.py",
+            f"touch apps/{app_name}/serializers.py",
+            f"touch apps/{app_name}/urls.py",
+            f"mkdir -p apps/{app_name}/tests",
+            f"touch apps/{app_name}/tests/factories.py",
+            f"touch apps/{app_name}/tests/api.py",
+            f"rm apps/{app_name}/tests.py",
         ]
 
 
