@@ -277,18 +277,14 @@ class DjangoTasks(ProxyMixin):
     def startapp(self, tpl: str, cmd: str, args: str):
         # args - must start with app_name
         app_name, *args = args.strip().split(" ")
+        tpl_folder = "boilerplate/startapp"
         if not app_name:
             print(S.danger("ERROR: `app_name` wan not provided"))
             return []
         return [
             f"mkdir -p apps/{app_name}",
             self.format(tpl, f"startapp {app_name}", f"apps/{app_name}"),
-            f"touch apps/{app_name}/signals.py",
-            f"touch apps/{app_name}/serializers.py",
-            f"touch apps/{app_name}/urls.py",
-            f"mkdir -p apps/{app_name}/tests",
-            f"touch apps/{app_name}/tests/factories.py",
-            f"touch apps/{app_name}/tests/api.py",
+            f"cp -r {tpl_folder}/* apps/{app_name}/",
             f"rm apps/{app_name}/tests.py",
         ]
 
