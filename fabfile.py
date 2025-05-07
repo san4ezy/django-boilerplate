@@ -3,6 +3,7 @@ import os
 import secrets
 import shutil
 import string
+from functools import wraps
 from pathlib import Path
 
 from fabric import task
@@ -110,7 +111,24 @@ ENV_FILE = Path("environments") / ENV / "app.env"
 TEST_MODE: bool = False
 
 
+def confirm(prompt="Are you sure?"):
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            confirmation = input(S.danger(f"{prompt} (y/N) ")).strip().lower()
+            if confirmation != 'y':
+                print(S.warning("[Aborted]"))
+                return
+            return func(*args, **kwargs)
+        return wrapper
+    return decorator
+
+
 class InstallTasks:
+    @confirm(
+        "Are you sure you want to setup the project? "
+        "Notice, it will replace the existing files!"
+    )
     def setup(self, c):
         env_dir = Path("environments") / ENV
 
@@ -152,6 +170,10 @@ class InstallTasks:
             )
         )
 
+    @confirm(
+        "Are you sure you want to generate keys? "
+        "Notice, it could replace the existing keys values!"
+    )
     def keygen(self, c):
         replaces = {
             "POSTGRES_PASSWORD": Core.generate_secret(16, is_special_chars=False),
@@ -251,7 +273,7 @@ class DockerTasks(ProxyMixin):
     def rebuild(self, tpl: str, cmd: str, args: str):
         return [
             self.format(tpl, "down", args),
-            self.format(tpl, "build --no-cache", args),
+            self.format(tpl, "build", args),
             self.format(tpl, "up -d", args),
         ]
 
@@ -271,6 +293,8 @@ class DjangoTasks(ProxyMixin):
             "collectstatic": (self.cmd, default_args),
             "createsuperuser": (self.cmd, default_args),
             "startapp": (self.startapp, default_args),
+            "makecommand": (self.makecommand, default_args),
+            # "makedatamigration": (self.makedatamigration, default_args),
             "test": (self.cmd, (tools_tpl, "pytest", args)),
         }
 
@@ -279,7 +303,7 @@ class DjangoTasks(ProxyMixin):
         app_name, *args = args.strip().split(" ")
         tpl_folder = "boilerplate/startapp"
         if not app_name:
-            print(S.danger("ERROR: `app_name` wan not provided"))
+            print(S.danger("ERROR: `app_name` was not provided"))
             return []
         return [
             f"mkdir -p apps/{app_name}",
@@ -287,6 +311,34 @@ class DjangoTasks(ProxyMixin):
             f"cp -r {tpl_folder}/* apps/{app_name}/",
             f"rm apps/{app_name}/tests.py",
         ]
+
+    def makecommand(self, tpl: str, cmd: str, args: str):
+        # args - must start with app_name
+        app_name, *args = args.strip().split(" ")
+        if not app_name:
+            print(S.danger("ERROR: `app_name` was not provided"))
+            return []
+        if len(args) == 0:
+            print(S.danger("ERROR: `command_name` was not provided"))
+            return []
+        command_name = args[0]
+        tpl_folder = "boilerplate/makecommand"
+        print(S.info(f"Command file: apps/{app_name}/management/commands/{command_name}.py"))
+        return [
+            f"mkdir -p apps/{app_name}/management/commands",
+            f"touch apps/{app_name}/management/__init__.py",
+            f"touch apps/{app_name}/management/commands/__init__.py",
+            f"cp {tpl_folder}/example.py apps/{app_name}/management/commands/",
+            f"mv apps/{app_name}/management/commands/example.py apps/{app_name}/management/commands/{command_name}.py",
+        ]
+
+    # def makedatamigration(self, tpl: str, cmd: str, args: str):
+    #     # args - must start with app_name
+    #     app_name, *args = args.strip().split(" ")
+    #     return [
+    #         f"docker compose -f {COMPOSE} exec {APP_NAME} python manage.py makemigrations {app_name} --empty"
+    #         f"sed -i '/operations = $$/,/]/s/\[$$/string1, string2, string3/' filename.txt",
+    #     ]
 
 
 class LinterTasks(ProxyMixin):
