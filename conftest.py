@@ -1,9 +1,12 @@
 from dataclasses import dataclass
+from typing import Type
 
-from django.contrib.auth.models import AnonymousUser
+from django.contrib.auth.models import AnonymousUser, Permission
+from django.contrib.contenttypes.models import ContentType
 from django.core.files.uploadedfile import SimpleUploadedFile
 
 import pytest
+from django.db.models import Model
 from gears.models.jwt import JWTUserModelMixin
 from pytest_factoryboy import register
 from rest_framework.test import APIClient
@@ -41,6 +44,30 @@ def token():
         token = jwt_model.extend_token(token)
         return token
 
+    return wrapper
+
+
+class Perm:
+    VIEW, ADD, CHANGE, DELETE = "view", "add", "change", "delete"
+
+
+@pytest.fixture
+def set_permissions():
+    def wrapper(current_user, permissions: tuple[Model, str]):
+        def set_perm(m: Type[Model], mt: str):
+            if isinstance(current_user, AnonymousUser):
+                return current_user
+            content_type = ContentType.objects.get_for_model(m)
+            perm, _ = Permission.objects.get_or_create(
+                codename=f"{mt}_{m.__name__.lower()}",
+                name=f"Can {mt} {m.__name__.lower()}",
+                content_type=content_type,
+            )
+            current_user.user_permissions.add(perm)
+
+        for model, method in permissions:
+            set_perm(model, method)
+        return current_user
     return wrapper
 
 
