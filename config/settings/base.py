@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
+    "adminsortable2",
     # Third-party
     "django_json_widget",
     "django_extensions",
