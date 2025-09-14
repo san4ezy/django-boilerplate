@@ -6,7 +6,7 @@ requires-python = ">=3.12"
 dependencies = [
     "dj-database-url>=2.3.0",
     "django-filter>=25.1",
-    "django==5.0.3",
+    "django==5.2.4",
     "djangorestframework>=3.16.0",
     "psycopg2-binary>=2.9.10",
     "django-extensions>=4.1",
@@ -39,6 +39,7 @@ dependencies = [
     "fabric>=3.2.2",
     "mypy>=1.15.0",
     "django-stubs>=5.1.3",
+    "django-admin-sortable2>=2.2.8",
 ]
 
 [dependency-groups]
