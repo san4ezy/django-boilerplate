@@ -108,6 +108,12 @@ APP_PORT = os.getenv("APP_PORT")
 COMPOSE = Path("environments") / ENV / "docker-compose.yml"
 ENV_FILE = Path("environments") / ENV / "app.env"
 
+Core.load_dotenv(ENV_FILE)
+# Database
+DB_USER = os.getenv("POSTGRES_USER")
+DB_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+DB_NAME = os.getenv("POSTGRES_DB")
+
 TEST_MODE: bool = False
 
 
@@ -278,6 +284,46 @@ class DockerTasks(ProxyMixin):
         ]
 
 
+class DBTasks(ProxyMixin):
+    # !NOTICE! It actually works for the Postgres db only
+
+    def get_command(self, cmd: str, args: str):
+        tpl = "docker compose -f {COMPOSE} {cmd} {args}"
+        default_args = (tpl, cmd, args)
+        return {
+            "backup": (self.backup, default_args),
+            "restore": (self.restore, default_args),
+        }
+
+    def backup(self, tpl: str, cmd: str, args: str):
+        name = datetime.now().strftime("%Y%m%d%H%M%S")
+        dir_name = "backups"
+        os.makedirs(f"{dir_name}", exist_ok=True)
+        backup_file = f"{dir_name}/{name}.db"
+        return [
+            self.format(
+                "docker compose -f {COMPOSE} {cmd} {args} exec "
+                "db pg_dump -U {DB_USER} {DB_NAME} > %s" % backup_file,
+                "",
+                args,
+                ),
+        ]
+
+    def restore(self, tpl: str, cmd: str, args: str):
+        backup_path = Path("backups/")
+        files = list(backup_path.glob("??????????????.db"))
+        files.sort(key=lambda p: p.name)
+        name = files[-1]
+        return [
+            self.format(
+                "docker compose -f {COMPOSE} {cmd} {args} exec -T "
+                "db psql -U {DB_USER} {DB_NAME} < %s" % name,
+                "",
+                args,
+                ),
+        ]
+
+
 class DjangoTasks(ProxyMixin):
     def get_command(self, cmd: str, args: str):
         tpl = (
@@ -362,11 +408,24 @@ class LinterTasks(ProxyMixin):
         ]
 
 
+class CustomTasks(ProxyMixin):
+    def get_command(self, cmd: str, args: str):
+        tpl = (
+            "docker compose -f {COMPOSE} exec {APP_NAME} python manage.py {cmd} {args}"
+        )
+        default_args = (tpl, cmd, args)
+        return {
+            "custom_command": (self.cmd, default_args),
+        }
+
+
 # TASKS DEFINITION
 INSTALL = InstallTasks()
 DOCKER = DockerTasks()
+DB = DBTasks()
 DJANGO = DjangoTasks()
 LINTER = LinterTasks()
+CUSTOM = CustomTasks()
 
 
 @task
@@ -385,6 +444,11 @@ def docker(c, cmd, args=""):
 
 
 @task
+def db(c, cmd, args=""):
+    DB.command(c, cmd, args)
+
+
+@task
 def django(c, cmd, args=""):
     DJANGO.command(c, cmd, args)
 
@@ -398,3 +462,8 @@ def dj(c, cmd, args=""):
 @task
 def lint(c, cmd, args=""):
     LINTER.command(c, cmd, args)
+
+
+@task
+def custom(c, cmd, args=""):
+    CUSTOM.command(c, cmd, args)
