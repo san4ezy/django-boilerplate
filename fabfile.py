@@ -36,7 +36,7 @@ class Core:
         if is_letters:
             chars += string.ascii_letters
         if is_special_chars:
-            chars += "!@#$%^&*()"
+            chars += "!@#%^&*()"
         return "".join(secrets.choice(chars) for _ in range(l))
 
     @staticmethod
