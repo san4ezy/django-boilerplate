@@ -108,7 +108,12 @@ APP_PORT = os.getenv("APP_PORT")
 COMPOSE = Path("environments") / ENV / "docker-compose.yml"
 ENV_FILE = Path("environments") / ENV / "app.env"
 
-Core.load_dotenv(ENV_FILE)
+try:
+    Core.load_dotenv(ENV_FILE)
+except FileNotFoundError:
+    print(S.warning(f"File {ENV_FILE} not found"))
+
+
 # Database
 DB_USER = os.getenv("POSTGRES_USER")
 DB_PASSWORD = os.getenv("POSTGRES_PASSWORD")
