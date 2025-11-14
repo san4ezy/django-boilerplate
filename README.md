@@ -21,7 +21,7 @@ cp .env.example .env
 - **APP_PORT** -- Port, where Django will be located.
 - **COMPOSE_PROJECT_NAME** -- The name used for the Compose entities.
 
-Now we need to generate nother environment files and data: 
+Now we need to generate environment files and data: 
 ```bash
 fab setup
 fab keygen
@@ -80,4 +80,4 @@ fab docker logs --args '--tail 1000'
 
 ## New application
 
-If you need to start new Django app, you can do it fast: `fab startapp`. It generates new app placed at the needed folder.
+If you need to start new Django app, you can do it fast: `fab dj startapp`. It generates new app placed at the needed folder.
