@@ -6,6 +6,10 @@ ENV_DIR := environments/$(ENV)
 ENV_FILE := $(ENV_DIR)/app.env
 COMPOSE_FILE := $(ENV_DIR)/docker-compose.yml
 
+# Export host UID and GID
+export HOST_UID := $(shell id -u)
+export HOST_GID := $(shell id -g)
+
 # Include environment variables if app.env exists
 -include $(ENV_FILE)
 export

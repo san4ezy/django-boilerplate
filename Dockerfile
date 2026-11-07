@@ -22,9 +22,12 @@ FROM python:3.14-slim AS runner
 
 WORKDIR /app
 
-# Create non-root system user and prepare media, static, and logs directories with proper permissions
-RUN groupadd --system appgroup && \
-    useradd --system -g appgroup appuser && \
+ARG UID=1000
+ARG GID=1000
+
+# Create non-root user and prepare media, static, and logs directories with proper permissions
+RUN groupadd -g "${GID}" appgroup && \
+    useradd -u "${UID}" -g appgroup appuser && \
     mkdir -p /app/media /app/static /app/logs && \
     chown -R appuser:appgroup /app
 
