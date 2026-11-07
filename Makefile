@@ -1,6 +1,9 @@
 # Default environment variable
 ENV ?= development
 
+# Include environment variables if .env exists
+-include .env
+
 # Define path configurations
 ENV_DIR := environments/$(ENV)
 ENV_FILE := $(ENV_DIR)/app.env

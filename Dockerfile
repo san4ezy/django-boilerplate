@@ -1,6 +1,8 @@
 # Stage 1: Build virtual environment dependencies using uv
 FROM python:3.14-slim AS builder
 
+ARG ENV=development
+
 # Install uv binary from official image
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
@@ -15,7 +17,7 @@ WORKDIR /app
 COPY pyproject.toml uv.lock* ./
 
 # Synchronize dependencies into /venv directly from pyproject.toml
-RUN uv sync --no-install-project
+RUN uv sync --no-install-project --group ${ENV}
 
 # Stage 2: Minimal runtime container
 FROM python:3.14-slim AS runner
