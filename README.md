@@ -1,83 +1,139 @@
-This is the powerful boilerplate for Django+RestFramework projects.
+# Modern Django 6.x Boilerplate
 
-It contains all basic configuration, multiple environment settings, dockerized environment, JWT authorization, customizable User model and lots of sugar.
+A feature-rich, high-performance boilerplate for Django + Django REST Framework projects, built with **Python 3.14+**, **Django 6.x**, **`uv`** dependency management, and fully containerized with **Docker Compose**.
 
-Start it in 5 minutes.
+All setup and development tasks are automated using a standard **`Makefile`**.
 
-Before you start, you should have installed Docker and Docker Compose, Python (of course) and installed globally Fabric.
+---
 
-## Installation
+## Tech Stack
 
-By default, we use Postgres as the database for the project. 
+* **Python:** 3.14+
+* **Framework:** Django 6.x, Django REST Framework
+* **Dependency & Environment Management:** `uv` via `pyproject.toml`
+* **Containerization:** Docker & Docker Compose (multi-stage build, non-root user, health checks)
+* **Database:** PostgreSQL 18.6
+* **Task Automation:** `Makefile`
+* **Code Quality & Testing:** Pytest, Black, isort, Flake8, mypy, factory-boy
 
-Pull this repo, create a basic env file from the template and modify it on your taste:
+---
+
+## Prerequisites
+
+Before starting, ensure you have the following installed on your system:
+
+* [Docker](https://docs.docker.com/get-docker/) and Docker Compose
+* `make` utility (pre-installed on Linux/macOS)
+* `git`
+
+---
+
+## Quick Start
+
+Get your project up and running in less than 5 minutes:
+
+### 1. Initialize Environment Configuration
+Copy environment templates and replace initial project placeholders:
 
 ```bash
-cp .env.example .env
+make setup ENV=development
 ```
-- **ENV** -- The name of environment you want to install. Choose one: development, staging, production. 
-- **PROJECT_NAME** -- This name will be used as the prefix for all containers.
-- **APP_NAME** -- Desired name of the main Django app.
-- **APP_PORT** -- Port, where Django will be located.
-- **COMPOSE_PROJECT_NAME** -- The name used for the Compose entities.
 
-Now we need to generate environment files and data: 
+### 2. Generate Cryptographic Keys
+
+Generate random secure keys (`SECRET_KEY`, `POSTGRES_PASSWORD`, JWT keys) and save them to `environments/development/app.env`:
+
 ```bash
-fab setup
-fab keygen
+make keygen ENV=development
 ```
-First one makes a copies of all needed files and locate them at the `environments/<ENV>` directory.
-Second one generates all secret keys for Django, Simple JWT and token payload.
-Of course, you can modify this data manually. But notice, if you already have image build you need to rebuild it again every time you change something here.
 
-Now the boilerplate is available for up:
+### 3. Build & Run Containers
+
+Build Docker images using multi-stage `uv` layers and start containers in background:
+
 ```bash
-fab docker build
-fab docker up
-fab dj migrate
+make build
+make up
 ```
 
-Optionally, create an admin:
+### 4. Apply Database Migrations & Create Superuser
+
 ```bash
-fab dj createsuperuser
+make migrate
+make superuser
 ```
 
-Now you have Django running with Docker on defined port.
+Your Django application is now running at: `http://localhost:8000/admin/`
 
-## Commands
+---
 
-Pls, explore the `fabfile.py` content to know other commands.
+## Available Commands
 
-Here collected most popular commands with potential needed options for run them fast with a short single Fabric command.
+Run `make` or `make help` to view all available commands in your terminal.
 
-Feel free to extend this list with your commands.
+### Environment Setup
 
-- **fab setup** -- Setup new environments. Be careful, it will replace existing env files and compose files. Use it if you want setup new environment, changing the `ENV` variable first.
-- **fab keygen** -- Generate random secret keys and write them to `environments/<ENV>/app.env` file
-- **fab docker build** -- Initiate the compose build process
-- **fab docker rebuild** -- Down existing project, build it and up again
-- **fab docker up** -- Just up project
-- **fab docker down** -- Just down project
-- **fab docker ps** -- List running containers
-- **fab docker logs** -- Tail logs of the Django app
-- **fab docker start** -- Start project
-- **fab docker stop** -- Stop Project
-- **fab docker restart** -- Restart project
-- **fab docker bash** -- Run Django container's bash
-- **fab dj shell** -- Run Django shell
-- **fab dj makemigrations/migrate/showmigrations** -- Run Django migrations commands
-- **fab dj collectstatic** -- Run Django collect static command
-- **fab dj createsuperuser** -- Start the superuser creation flow
-- **fab dj startapp** -- Create new Django application
+* `make setup ENV=<env>` — Prepare environment configuration files (`app.env` and `docker-compose.yml`).
+* `make keygen ENV=<env>` — Generate secure random secrets for the specified environment.
 
-Some commands have default args values. But you can impact how it works. For example:
-```bash
-fab docker logs
-# docker compose -f environments/development/docker-compose.yml logs app --tail 100 -f
-fab docker logs --args '--tail 1000'
-# docker compose -f environments/development/docker-compose.yml logs app --tail 1000
+### Docker Operations
+
+* `make build` — Build Docker service images.
+* `make up` — Start containers in background.
+* `make down` — Stop and remove running containers.
+* `make restart` — Restart containers.
+* `make rebuild` — Full rebuild cycle (down -> build -> up).
+* `make logs` — Tail container logs in real time.
+* `make ps` — List running project containers.
+* `make bash` — Open interactive bash session inside Django container.
+
+### Django Commands
+
+* `make migrate` — Apply database migrations.
+* `make makemigrations` — Generate new database migrations.
+* `make showmigrations` — List status of all migrations.
+* `make superuser` — Create Django superuser interactively.
+* `make shell` — Open interactive Django shell (`shell_plus`).
+* `make collectstatic` — Collect static files.
+* `make test` — Run test suite via `pytest`.
+
+### Code Generators
+
+* `make startapp app=<name>` — Scaffold a new Django app under `apps/<name>` from `boilerplate/startapp/`.
+* `make makecommand app=<name> cmd=<command>` — Scaffold a new management command in `apps/<name>/management/commands/<command>.py`.
+
+### Database Backup & Restore
+
+* `make backup` — Dump PostgreSQL database into `backups/` directory.
+* `make restore` — Restore database from the latest `.db` dump file in `backups/`.
+
+### Code Quality & Linters
+
+* `make lint` — Run all quality checks (`black`, `isort`, `flake8`, `mypy`).
+* `make black` — Auto-format code using Black.
+* `make isort` — Sort imports using isort.
+* `make flake8` — Run Flake8 linter.
+* `make mypy` — Perform static type checking with mypy.
+
+---
+
+## Project Structure
+
+```text
+ROOT/
+├── apps/                # Application modules (core, users, etc.)
+│   ├── core/            # Base abstract models and helpers
+│   └── users/           # Custom user model and authentication
+├── boilerplate/         # Generator templates
+│   ├── startapp/        # Template for new Django apps
+│   └── makecommand/     # Template for management commands
+├── config/              # Django settings split by environment
+│   └── settings/        # base.py, development.py, production.py, staging.py, test.py
+├── environments/        # Isolated environment settings
+│   ├── development/     # app.env.example, docker-compose.yml.example
+│   ├── production/      # app.env.example, docker-compose.yml.example
+│   └── staging/         # app.env.example, docker-compose.yml.example
+├── Dockerfile           # Python 3.14+ multi-stage Dockerfile with uv
+├── Makefile             # Automation Makefile
+└── pyproject.toml       # Single config for dependencies (uv) & dev tools
 ```
-
-## New application
-
-If you need to start new Django app, you can do it fast: `fab dj startapp`. It generates new app placed at the needed folder.

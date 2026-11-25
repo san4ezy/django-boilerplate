@@ -1,7 +1,73 @@
-*.pyc
-celerybeat-schedule.db
-.idea/
-*__pycache__*
+# ==========================================
+# Python & Virtual Environments (uv, venv)
+# ==========================================
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+ENV/
+env/
+.uv/
+
+# ==========================================
+# Django & Databases
+# ==========================================
 db.sqlite3
-*.log
+db.sqlite3-journal
+*.sqlite3
+local_settings.py
+
+# User media uploads and collected static files
+/media/
+/static_collected/
+/staticfiles/
+
+# ==========================================
+# Environment Variables & Secrets (.env)
+# ==========================================
+*.env
+.env
+.env.*
 .env.local
+
+# Allow tracking safe configuration templates
+!.env.example
+!.env.template
+
+# ==========================================
+# Logs & Celery
+# ==========================================
+*.log
+logs/
+celerybeat-schedule
+celerybeat-schedule.db
+
+# ==========================================
+# Testing & Tooling (pytest, coverage, mypy, ruff)
+# ==========================================
+.pytest_cache/
+.coverage
+.coverage.*
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+
+# ==========================================
+# IDE & Editor Settings
+# ==========================================
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ==========================================
+# OS Generated Files (macOS / Windows)
+# ==========================================
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

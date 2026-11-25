@@ -1,6 +1,7 @@
 from django.conf import settings
 from django.conf.urls.static import static
 from django.contrib import admin
+from django.http import JsonResponse
 from django.urls import include
 from django.urls import path
 from django.urls import re_path
@@ -16,7 +17,7 @@ schema_view = get_schema_view(
         default_version="v1",
         description="",
         terms_of_service="...",
-        contact=openapi.Contact(email="san4ezy@gmail.com"),
+        contact=openapi.Contact(email=getattr(settings, "SWAGGER_CONTACT_EMAIL", "")),
     ),
     public=True,
     permission_classes=[
@@ -26,7 +27,22 @@ schema_view = get_schema_view(
 )
 
 
+def health_check(request):
+    """
+    Health check endpoint for Docker container healthcheck routine.
+    Returns HTTP 200 OK with JSON status payload.
+    """
+    if request.META.get('REMOTE_ADDR') not in ['127.0.0.1', '::1']:
+        return JsonResponse({"error": "Forbidden"}, status=403)
+    return JsonResponse({"status": "ok"})
+
 urlpatterns = [
+    # Health check
+    path(
+        "health/",
+        health_check,
+        name="health_check"
+    ),
     # Specification
     path(
         "doc/api.json",

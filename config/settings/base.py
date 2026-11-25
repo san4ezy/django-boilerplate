@@ -277,3 +277,5 @@ SWAGGER_SETTINGS = {
     "SECURITY_DEFINITIONS": {"JWT": {"type": "jwt"}},
 }
 SWAGGER_USE_COMPAT_RENDERERS = False
+
+SWAGGER_CONTACT_EMAIL = os.getenv("SWAGGER_CONTACT_EMAIL", "admin@example.com")

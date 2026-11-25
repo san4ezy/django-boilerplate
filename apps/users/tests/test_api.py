@@ -6,7 +6,7 @@ from rest_framework import status
 from rest_framework.reverse import reverse
 from rest_framework_simplejwt.tokens import RefreshToken
 
-from apps.core.helpers import PytestBase
+from apps.core.tests.base import PytestBase
 from apps.users.models import User
 from apps.users.tests.factories import DEFAULT_PASSWORD
 from apps.users.tests.factories import NEW_PASSWORD

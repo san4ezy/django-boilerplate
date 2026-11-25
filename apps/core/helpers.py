@@ -1,14 +1,8 @@
 import functools
 import time
 
-import pytest
-
 
 NULLABLE = {"blank": True, "null": True}
-
-
-class PytestBase:
-    pytestmark = pytest.mark.django_db
 
 
 def try_it(max_attempts, timeout, exceptions):

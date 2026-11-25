@@ -1,55 +1,153 @@
 [project]
 name = "boilerplate"
 version = "0.1.0"
-description = "Add your description here"
-requires-python = ">=3.12"
+description = "Django 6.x boilerplate"
+readme = "README.md"
+requires-python = ">=3.14"
 dependencies = [
-    "dj-database-url>=2.3.0",
-    "django-filter>=25.1",
-    "django==5.2.4",
-    "djangorestframework>=3.16.0",
-    "psycopg2-binary>=2.9.10",
-    "django-extensions>=4.1",
-    "djangorestframework-simplejwt>=5.5.0",
-    "factory-boy>=3.3.3",
-    "pytest-factoryboy>=2.7.0",
-    "drf-nested-routers>=0.94.1",
-    "faker>=37.1.0",
-    "flake8>=7.2.0",
-    "pytest>=8.3.5",
-    "pytest-django>=4.11.1",
-    "pytest-cov>=6.1.1",
-    "ipython>=9.1.0",
-    "isort>=6.0.1",
-    "pytest-mock>=3.14.0",
-    "django-cors-headers>=4.7.0",
-    "django-jazzmin>=3.0.1",
-    "django-factory-boy>=1.0.0",
-    "django-pytest>=0.2.0",
-    "orjson>=3.10.16",
-    "pylint-django>=2.6.1",
-    "black>=25.1.0",
-    "django-json-widget>=2.0.1",
-    "python-dotenv>=1.1.0",
-    "pillow>=11.2.1",
+    # Core Django & REST Framework
+    "django>=6.1.2,<7.0",
+    "djangorestframework>=3.18.1",
+    "djangorestframework-simplejwt>=5.5.1",
+    "drf-nested-routers>=0.95.3",
+    "drf-yasg>=1.21.17",
     "drf-gears>=0.10.7",
-    "django-soft-delete>=1.0.18",
-    "drf-yasg>=1.21.10",
-    "django-redis>=5.4.0",
-    "fabric>=3.2.2",
-    "mypy>=1.15.0",
-    "django-stubs>=5.1.3",
-    "django-admin-sortable2>=2.2.8",
+    "cryptography>=50.0.2",
+
+    # Database & ORM helpers
+    "psycopg[binary]>=3.3.6",
+    "dj-database-url>=3.1.2",
+    "django-filter>=26.2",
+    "django-extensions>=4.1",
+    "django-soft-delete>=1.0.23",
+    "django-admin-sortable2>=2.3.1",
+    "django-json-widget>=2.1.1",
+
+    # Security & Utilities
+    "django-cors-headers>=4.9.0",
+    "python-dotenv>=1.2.4",
+    "orjson>=3.12",
+    "pillow>=12.3",
+
+    # Storage & Cache
+    "django-redis>=7.0.0",
+
+    # UI Theme
+    "django-jazzmin>=3.0.5",
 ]
 
 [dependency-groups]
-production = [
-    "gunicorn>=23.0.0",
+development = [
+    "pytest>=9.1",
+    "pytest-django>=4.14.0",
+    "pytest-cov>=7.1.0",
+    "pytest-mock>=3.16.0",
+    "factory-boy>=3.3.3",
+    "pytest-factoryboy>=2.8.1",
+    "faker>=40.41.0",
+    "ipython>=9.17.1",
+    "black>=26.10.0",
+    "isort>=9.0.2",
+    "flake8>=7.4.1",
+    "mypy>=2.4.0",
+    "django-stubs>=6.1.2",
+    "pylint-django>=2.8.0",
 ]
 staging = [
-    "gunicorn>=23.0.0",
+    "gunicorn>=26.2.0",
 ]
-development = [
-    "flake8>=7.2.0",
+production = [
+    "gunicorn>=26.2.0",
 ]
 
+# Code Formatting Configuration
+[tool.black]
+line-length = 88
+target-version = ["py314"]
+exclude = '''
+/(
+    \.git
+  | \.venv
+  | migrations
+)/
+'''
+
+# Sorting Configuration
+[tool.isort]
+profile = "black"
+line_length = 88
+indent = 4
+atomic = true
+lines_after_imports = 2
+force_single_line = true
+default_section = "THIRDPARTY"
+known_first_party = ["apps"]
+known_django = ["django"]
+sections = ["FUTURE", "STDLIB", "DJANGO", "THIRDPARTY", "FIRSTPARTY", "LOCALFOLDER"]
+skip_glob = ["*/migrations/*.py", "*/.venv/*"]
+skip = ["migrations", "assets"]
+
+# Static Type Checker Configuration
+[tool.mypy]
+python_version = "3.14"
+platform = "linux"
+warn_incomplete_stub = true
+ignore_missing_imports = true
+check_untyped_defs = true
+plugins = ["mypy_django_plugin.main"]
+
+[tool.django-stubs]
+django_settings_module = "config.settings.development"
+
+[[tool.mypy.overrides]]
+module = [
+    "api.migrations.*",
+    "apps.*.migrations.*",
+    "libraries.*",
+    "config.settings.*",
+]
+ignore_errors = true
+
+# Testing Configuration
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "config.settings.test"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+testpaths = ["apps"]
+addopts = "--disable-warnings --maxfail=1 --migrations --create-db"
+junit_family = "xunit1"
+filterwarnings = [
+    "ignore:.*received a naive.*while time zone support is active.*:RuntimeWarning:django.db.models.fields",
+]
+markers = [
+    "race_condition: test race condition in concurrent API requests.",
+    "override_settings: does the same as `django.test.override_settings` but in pytest way.",
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+    "refactor: marks tests for refactoring",
+]
+
+# Coverage Configuration
+[tool.coverage.run]
+omit = [
+    "*/tests/*",
+    "*/factories.py",
+    "*/**/factories.py",
+    "*/migrations/*",
+    ".venv/*",
+    "*/settings/*",
+    "manage.py",
+    "wsgi.py",
+    "conftest.py",
+    "docs/*",
+    "middlewares.py",
+    "exception_handlers.py",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise NotImplementedError",
+    "pass",
+    "raise ImportError",
+    "if __name__ == .__main__.:",
+]
