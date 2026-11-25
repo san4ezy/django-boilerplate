@@ -1,35 +1,44 @@
+x-app-base: &app-base
+  build:
+    context: ../../
+    dockerfile: Dockerfile
+    args:
+      ENV: ${ENV:-development}
+      UID: ${HOST_UID:-1000}
+      GID: ${HOST_GID:-1000}
+  image: "<PROJECT_NAME>_<APP_NAME>"
+  restart: unless-stopped
+  env_file:
+    - app.env
+  volumes:
+    - ../../:/app
+    - app_logs:/app/logs
+  depends_on:
+    db:
+      condition: service_healthy
+
 services:
 
   <APP_NAME>:
-    build:
-      context: ../../
-      dockerfile: Dockerfile
-      args:
-        ENV: ${ENV}
-        UID: ${HOST_UID:-1000}
-        GID: ${HOST_GID:-1000}
+    <<: *app-base
     container_name: "<PROJECT_NAME>_<APP_NAME>"
-    image: "<PROJECT_NAME>_<APP_NAME>"
-    restart: unless-stopped
-    env_file:
-      - app.env
-    command: gunicorn config.wsgi:application --bind 0.0.0.0:8000 --workers 3
-    volumes:
-      - ../../:/app
-      - app_logs:/app/logs
+    command: python manage.py runserver 0.0.0.0:8000
     ports:
       - "<APP_PORT>:8000"
-    depends_on:
-      - db
 
   db:
-    image: "postgres:18.6-alpine"
+    image: "postgres:18.7-alpine"
     container_name: "<PROJECT_NAME>_db"
     restart: unless-stopped
     env_file:
       - app.env
     volumes:
       - postgres:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
 
 volumes:
   postgres:

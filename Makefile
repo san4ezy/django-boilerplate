@@ -27,7 +27,10 @@ DB_NAME ?= $(POSTGRES_DB)
 # Use bash for subshell commands
 SHELL := /bin/bash
 
-.PHONY: help setup keygen build up down restart rebuild logs ps bash \
+# Unified Docker Compose execution command
+COMPOSE := docker compose -p $(PROJECT_NAME) -f $(COMPOSE_FILE)
+
+.PHONY: help setup keygen build up down down-v clean prune restart rebuild logs ps bash \
         migrate makemigrations showmigrations superuser shell collectstatic test \
         startapp makecommand backup restore lint black isort flake8 mypy
 
@@ -39,7 +42,7 @@ SHELL := /bin/bash
 
 help: ## Show this interactive help menu
 	@echo -e "\033[1;34mAvailable commands:\033[0m"
-	@grep -E '^[a-zA-Z_-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
+	@grep -h -E '^[a-zA-Z0-9_-]+:.*?## ' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-18s\033[0m %s\n", $$1, $$2}'
 
 setup: ## Copy environment files and replace placeholder variables (Usage: make setup ENV=development)
 	@echo -e "\033[32m[+] Setting up environment configuration for: $(ENV)...\033[0m"
@@ -67,52 +70,61 @@ keygen: ## Generate random secret keys in app.env (Usage: make keygen ENV=develo
 # ==============================================================================
 
 build: ## Build docker compose services
-	docker compose -f $(COMPOSE_FILE) build
+	$(COMPOSE) build
 
-up: ## Start services in background
-	docker compose -f $(COMPOSE_FILE) up -d
+up: ## Start services in background and remove orphaned containers
+	$(COMPOSE) up -d --remove-orphans
 
-down: ## Stop and remove containers
-	docker compose -f $(COMPOSE_FILE) down
+down: ## Stop and remove containers along with orphaned containers
+	$(COMPOSE) down --remove-orphans
+
+down-v: ## Stop containers, remove orphans and delete named volumes (data reset)
+	$(COMPOSE) down -v --remove-orphans
+
+clean: ## Full project cleanup: remove containers, orphans, volumes, and local images
+	$(COMPOSE) down -v --rmi local --remove-orphans
+
+prune: ## Prune unused Docker system resources (stopped containers, unused networks)
+	docker system prune -f
 
 restart: ## Restart compose services
-	docker compose -f $(COMPOSE_FILE) restart
+	$(COMPOSE) restart
 
 rebuild: down build up ## Rebuild containers and restart
 
 logs: ## View real-time container logs
-	docker compose -f $(COMPOSE_FILE) logs $(APP_NAME) --tail 100 -f
+	$(COMPOSE) logs $(APP_NAME) --tail 100 -f
 
 ps: ## List running project containers
-	docker compose -f $(COMPOSE_FILE) ps
+	$(COMPOSE) ps
 
 bash: ## Open interactive bash session inside application container
-	docker compose -f $(COMPOSE_FILE) exec $(APP_NAME) bash
+	$(COMPOSE) exec $(APP_NAME) bash
 
 # ==============================================================================
 # DJANGO MANAGEMENT COMMANDS
 # ==============================================================================
 
 migrate: ## Apply database migrations
-	docker compose -f $(COMPOSE_FILE) exec $(APP_NAME) python manage.py migrate
+	$(COMPOSE) exec $(APP_NAME) python manage.py migrate
 
 makemigrations: ## Generate new database migrations
-	docker compose -f $(COMPOSE_FILE) exec $(APP_NAME) python manage.py makemigrations
+	$(COMPOSE) exec $(APP_NAME) python manage.py makemigrations
 
 showmigrations: ## Show status of database migrations
-	docker compose -f $(COMPOSE_FILE) exec $(APP_NAME) python manage.py showmigrations
+	$(COMPOSE) exec $(APP_NAME) python manage.py showmigrations
 
 superuser: ## Create new Django superuser
-	docker compose -f $(COMPOSE_FILE) exec $(APP_NAME) python manage.py createsuperuser
+	$(COMPOSE) exec $(APP_NAME) python manage.py createsuperuser
 
 shell: ## Open interactive Django shell (shell_plus)
-	docker compose -f $(COMPOSE_FILE) exec $(APP_NAME) python manage.py shell_plus
+	$(COMPOSE) exec $(APP_NAME) python manage.py shell_plus
 
 collectstatic: ## Collect static files
-	docker compose -f $(COMPOSE_FILE) exec $(APP_NAME) python manage.py collectstatic --noinput
+	$(COMPOSE) exec $(APP_NAME) python manage.py collectstatic --noinput
 
 test: ## Execute test suite via pytest
-	docker compose -f $(COMPOSE_FILE) exec $(APP_NAME) pytest
+	$(COMPOSE) exec $(APP_NAME) pytest
 
 # ==============================================================================
 # CODE GENERATORS
@@ -121,7 +133,7 @@ test: ## Execute test suite via pytest
 startapp: ## Scaffold a new Django application (Usage: make startapp app=blog)
 	@if [ -z "$(app)" ]; then echo "Error: Please specify target app name, e.g., 'make startapp app=blog'"; exit 1; fi
 	@mkdir -p apps/$(app)
-	docker compose -f $(COMPOSE_FILE) exec $(APP_NAME) python manage.py startapp $(app) apps/$(app)
+	$(COMPOSE) exec $(APP_NAME) python manage.py startapp $(app) apps/$(app)
 	@if [ -d "boilerplate/startapp" ]; then cp -r boilerplate/startapp/* apps/$(app)/; fi
 	@rm -f apps/$(app)/tests.py
 	@echo -e "\033[32m[✓] Scaffolded new app at 'apps/$(app)'\033[0m"
@@ -134,6 +146,10 @@ makecommand: ## Scaffold a new management command (Usage: make makecommand app=b
 	@cp boilerplate/makecommand/example.py apps/$(app)/management/commands/$(cmd).py
 	@echo -e "\033[32m[✓] Created management command 'apps/$(app)/management/commands/$(cmd).py'\033[0m"
 
+manage: ## Run arbitrary Django management commands (Usage: make manage cmd="migrate projects zero")
+	@if [ -z "$(cmd)" ]; then echo "Error: Please specify command, e.g., 'make manage cmd=\"migrate projects zero\"'"; exit 1; fi
+	$(COMPOSE) exec $(APP_NAME) python manage.py $(cmd)
+
 # ==============================================================================
 # DATABASE BACKUP & RESTORE
 # ==============================================================================
@@ -143,14 +159,14 @@ backup: ## Dump PostgreSQL database into backups/ directory
 	@TIMESTAMP=$$(date +%Y%m%d%H%M%S); \
 	BACKUP_FILE="backups/$${TIMESTAMP}.db"; \
 	echo -e "\033[32m[+] Creating database dump $${BACKUP_FILE}...\033[0m"; \
-	docker compose -f $(COMPOSE_FILE) exec -T db pg_dump -U $(DB_USER) $(DB_NAME) > $${BACKUP_FILE}; \
+	$(COMPOSE) exec -T db pg_dump -U $(DB_USER) $(DB_NAME) > $${BACKUP_FILE}; \
 	echo -e "\033[32m[✓] Backup finished: $${BACKUP_FILE}\033[0m"
 
 restore: ## Restore PostgreSQL database from latest dump in backups/
 	@LATEST_BACKUP=$$(ls -1t backups/*.db 2>/dev/null | head -n 1); \
 	if [ -z "$$LATEST_BACKUP" ]; then echo "Error: No backup files found in backups/"; exit 1; fi; \
 	echo -e "\033[33m[!] Restoring database from $${LATEST_BACKUP}...\033[0m"; \
-	docker compose -f $(COMPOSE_FILE) exec -T db psql -U $(DB_USER) $(DB_NAME) < $$LATEST_BACKUP; \
+	$(COMPOSE) exec -T db psql -U $(DB_USER) $(DB_NAME) < $$LATEST_BACKUP; \
 	echo -e "\033[32m[✓] Database restored successfully!\033[0m"
 
 # ==============================================================================
@@ -160,13 +176,13 @@ restore: ## Restore PostgreSQL database from latest dump in backups/
 lint: black isort flake8 mypy ## Run all code style checkers and linters
 
 black: ## Format code with Black
-	docker compose -f $(COMPOSE_FILE) exec $(APP_NAME) black .
+	$(COMPOSE) exec $(APP_NAME) black .
 
 isort: ## Sort module imports with isort
-	docker compose -f $(COMPOSE_FILE) exec $(APP_NAME) isort .
+	$(COMPOSE) exec $(APP_NAME) isort .
 
 flake8: ## Run Flake8 code linter
-	docker compose -f $(COMPOSE_FILE) exec $(APP_NAME) flake8 .
+	$(COMPOSE) exec $(APP_NAME) flake8 .
 
 mypy: ## Check type annotations with mypy
-	docker compose -f $(COMPOSE_FILE) exec $(APP_NAME) mypy -p apps
+	$(COMPOSE) exec $(APP_NAME) mypy -p apps
